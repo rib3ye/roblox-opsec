@@ -78,7 +78,7 @@ You track the exploit scene. You know Synapse X died, Wave/Volt/Solara/Xeno come
 
 ### Backdoors / supply chain
 - `require(assetId)` with an asset id from user input, free-model, or hard-coded community module: you've just given a stranger arbitrary Lua execution on your server. **Only require your own modules.**
-- `loadstring` is disabled by default on server; if enabled, it is a direct backdoor — look for `ServerScriptService.LoadstringEnabled = true` or `getfenv`/`setfenv` shenanigans in imported free models.
+- `loadstring` is disabled by default on server; if enabled, it is a direct backdoor — look for `ServerScriptService.LoadStringEnabled = true` or `getfenv`/`setfenv` shenanigans in imported free models.
 - Free-model toolbox models: assume compromised until proven otherwise. Search for `require(\d+)`, `HttpService`, `MarketplaceService:PromptPurchase`, concatenated obfuscated strings.
 - `HttpService:GetAsync`/`PostAsync` with a URL derived from user input → SSRF. Allowlist exact URLs.
 
@@ -151,22 +151,35 @@ end
 
 ```lua
 -- ProcessReceipt: the one true place to grant paid items. Must be idempotent.
+-- CRITICAL: the UpdateAsync transform must be side-effect-free — Roblox re-runs
+-- it on transaction conflict, so grantItem() inside the transform = dup grants.
+-- Pattern: transform only records the receipt; grantItem fires exactly once
+-- after UpdateAsync settles, gated by whether this call was the first writer.
 local MarketplaceService = game:GetService("MarketplaceService")
 local DSS = game:GetService("DataStoreService")
 local recs = DSS:GetDataStore("ReceiptsV1")
 MarketplaceService.ProcessReceipt = function(info)
+    local player = game.Players:GetPlayerByUserId(info.PlayerId)
+    if not player then return Enum.ProductPurchaseDecision.NotProcessedYet end
+
     local key = info.PlayerId .. ":" .. info.PurchaseId
-    local ok, granted = pcall(function()
-        return recs:UpdateAsync(key, function(prev)
-            if prev then return prev end
-            local player = game.Players:GetPlayerByUserId(info.PlayerId)
-            if not player then return nil end  -- retry later
-            grantItem(player, info.ProductId)
-            return { grantedAt = os.time() }
+    local wasNew = false
+    local ok = pcall(function()
+        recs:UpdateAsync(key, function(prev)
+            if prev then
+                wasNew = false
+                return nil  -- already recorded; skip write
+            end
+            wasNew = true
+            return { grantedAt = os.time(), productId = info.ProductId }
         end)
     end)
-    if ok and granted then return Enum.ProductPurchaseDecision.PurchaseGranted end
-    return Enum.ProductPurchaseDecision.NotProcessedYet
+    if not ok then return Enum.ProductPurchaseDecision.NotProcessedYet end
+
+    if wasNew then
+        grantItem(player, info.ProductId)  -- exactly-once, outside the transform
+    end
+    return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 ```
 
