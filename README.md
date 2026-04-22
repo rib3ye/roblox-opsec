@@ -6,16 +6,21 @@ A [Claude Code](https://docs.claude.com/en/docs/claude-code) skill that puts the
 
 When active, the assistant treats the **client as adversary-controlled code**: every `RemoteEvent` is a hostile payload, every `LocalScript` Instance reference is an attacker-chosen pointer, every `DataStore` call is a race condition waiting to happen. It audits specifically for:
 
-- Remote abuse: `RemoteEvent` / `RemoteFunction` validation, rate limiting, argument type/bounds checks
-- Economy & progression: currency flows, `ProcessReceipt` idempotency, purchase validation
-- DataStore: race conditions, `UpdateAsync` vs `SetAsync` misuse, cross-session replay, quota exhaustion
-- Physics & character: `Humanoid` state manipulation, teleport/speed detection, `Touched` spoofing
-- Interaction: `ProximityPrompt` / `ClickDetector` server-side distance checks
-- Backdoors & supply chain: free-model scripts, `require(id)` loading, `getfenv` / `loadstring` usage
-- `MessagingService` cross-server fanout, `HttpService` outbound data exfil
-- Replication leaks: anything sensitive in `ReplicatedStorage` that belongs in `ServerStorage`
-- UI: client-side gating of paid content or admin panels
-- Anomaly detection: telemetry hooks worth instrumenting for banwave evidence
+- Remote abuse: `RemoteEvent` / `RemoteFunction` / `UnreliableRemoteEvent` validation, rate limiting, argument type/bounds checks, state-machine ordering, replay/cardinality, outbound payload leakage
+- Economy & progression: currency flows, `ProcessReceipt` idempotency, purchase validation, **cross-server / server-hop dup**, daily-reward replay
+- Trading systems: switcheroo, partner-disconnect dup, stale-offer races, item-id forgery, cross-server trade brokering
+- DataStore: race conditions, `UpdateAsync` vs `SetAsync` misuse, cross-session replay, session locking, quota exhaustion, schema versioning
+- Physics & character: `Humanoid` state manipulation, teleport/speed detection, `Touched` spoofing, **NetworkOwnership flings / ram exploits**
+- Interaction: `ProximityPrompt` / `ClickDetector` server-side distance, ownership, prerequisites, and `Enabled` re-validation
+- Backdoors & supply chain: free-model scripts, `require(id)` loading, `loadstring` / `getfenv` usage, **obfuscated loaders** (`string.char` reconstruction, base64/hex decoding, instance-name regex extraction), **off-screen / whitespace / bidi-override payloads**, Studio-plugin compromise
+- `MessagingService` cross-server fanout, `HttpService` outbound data exfil, Open Cloud key hygiene
+- Teleport / cross-place: `TeleportData` mutability, reserved-server bearer tokens, cross-experience trust
+- Replication boundary: any `ModuleScript` the client can `:FindFirstChild` is fully readable; embedded webhook URLs / API keys / admin UserIds / anti-cheat thresholds in client-visible code
+- StreamingEnabled is a bandwidth optimisation, not a visibility boundary
+- Animation / `HumanoidDescription`: rig-displacement exploits, oversized accessories, client-supplied `AnimationId`s
+- UI: client-side gating of paid content, admin panels (`UserId` not `Name`, server-side `GetRankInGroup` with fail-closed cache)
+- Chat / `TextService` filtering, command surfaces, `PolicyService` advisory vs security
+- Anomaly detection: per-player anomaly counters, **free honeypots** on every `S→C`-only remote, banwave evidence and what to log
 
 ## Activation
 
@@ -23,8 +28,11 @@ Claude Code auto-invokes the skill from the description when you use language li
 
 - "audit this remote", "security review", "check for exploits"
 - "harden the economy / data flow / anti-cheat"
+- "dupe / dup / duplication exploit", "server hop"
+- "exploit kit / executor / Synapse / Wave / Solara / Xeno"
+- "ban wave / banwave"
 - "I'm about to publish — look for problems"
-- Pasting code that involves `RemoteEvent`, `DataStore`, `MarketplaceService`, `Humanoid`, `Touched`, etc.
+- Pasting code that involves `RemoteEvent`, `DataStore`, `ProfileStore`, `MarketplaceService`, `ProcessReceipt`, `Humanoid`, `Touched`, `ProximityPrompt`, `TeleportService`, `MessagingService`, `HttpService`, etc.
 
 You can also invoke it explicitly:
 
@@ -72,15 +80,22 @@ Severities: `CRIT`, `HIGH`, `MED`, `LOW`, `INFO`.
 
 For those, use a general coding assistant — the paranoid persona will slow you down with threats that don't apply.
 
+## File layout
+
+- `SKILL.md` — the persona, triage workflow, insecure-defaults cheat sheet, threat catalogue (one-paragraph essence per category), hardening code patterns, output/voice conventions. Read every time the skill is invoked.
+- `reference.md` — long-form deep-dives the agent reads on demand when auditing a specific category: full cross-server-dup taxonomy, the network-ownership/fling playbook, the obfuscated-loader catalogue, the off-screen/whitespace-payload audit procedure, the unreliable-remote threat model, the canonical trade flow, ProcessReceipt edge cases, lag-compensated hit detection, Open Cloud key hygiene, Studio-plugin supply chain, animation/HumanoidDescription exploits, banwave methodology, and a glossary of executor jargon.
+
 ## Contributing
 
 The skill stays sharp only if it tracks the current exploit ecosystem (executor capabilities, Byfron/Hyperion state, new primitives). PRs welcome for:
 
-- New threat entries under `## Threat catalogue`
+- New threat entries under `## Threat catalogue` in `SKILL.md` (with the deep-dive going into `reference.md`)
+- New entries in the `## Insecure defaults` cheat sheet — patterns concrete enough to flag on sight
 - Updated hardening patterns that reflect current Roblox API surface
 - Corrections when Roblox ships a platform-level mitigation that retires a prior concern
+- Updates to the executor glossary when the scene shifts
 
-Edit `SKILL.md` directly — frontmatter `name` and `description` are load-bearing for auto-invocation, don't change them without intent.
+Edit `SKILL.md` directly — frontmatter `name` and `description` are load-bearing for auto-invocation, don't change them without intent. Prefer adding the actionable summary to `SKILL.md` and the long-form taxonomy to `reference.md` so the main file stays scannable.
 
 ## License
 
