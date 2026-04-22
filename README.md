@@ -21,6 +21,7 @@ When active, the assistant treats the **client as adversary-controlled code**: e
 - UI: client-side gating of paid content, admin panels (`UserId` not `Name`, server-side `GetRankInGroup` with fail-closed cache)
 - Chat / `TextService` filtering, command surfaces, `PolicyService` advisory vs security
 - Anomaly detection: per-player anomaly counters, **free honeypots** on every `S→C`-only remote, banwave evidence and what to log
+- Typed-remote frameworks: **Zap (red-blox)** audit — schema-as-validation pitfalls, the `unknown` opt-out, mandatory user-side rate limiting (issue #219 server-crash mitigation), `PlayerRemoving` Fire-leak (#216), Zap-native honeypot pattern, generated-file placement, CLI/Zappy supply chain
 
 ## Activation
 
@@ -83,7 +84,7 @@ For those, use a general coding assistant — the paranoid persona will slow you
 ## File layout
 
 - `SKILL.md` — the persona, triage workflow, insecure-defaults cheat sheet, threat catalogue (one-paragraph essence per category), hardening code patterns, output/voice conventions. Read every time the skill is invoked.
-- `reference.md` — long-form deep-dives the agent reads on demand when auditing a specific category: full cross-server-dup taxonomy, the network-ownership/fling playbook, the obfuscated-loader catalogue, the off-screen/whitespace-payload audit procedure, the unreliable-remote threat model, the canonical trade flow, ProcessReceipt edge cases, lag-compensated hit detection, Open Cloud key hygiene, Studio-plugin supply chain, animation/HumanoidDescription exploits, banwave methodology, and a glossary of executor jargon.
+- `reference.md` — long-form deep-dives the agent reads on demand when auditing a specific category: full cross-server-dup taxonomy, the network-ownership/fling playbook, the obfuscated-loader catalogue, the off-screen/whitespace-payload audit procedure, the unreliable-remote threat model, the canonical trade flow, ProcessReceipt edge cases, lag-compensated hit detection, Open Cloud key hygiene, Studio-plugin supply chain, animation/HumanoidDescription exploits, banwave methodology, **the Zap (red-blox) audit playbook** (recognition fingerprints, option-by-option / event / funct / type pitfalls, full mitigations for issues #219 and #216, Zap-native honeypotting, generated-file placement, build/supply-chain hygiene, migration sanity check), and a glossary of executor jargon.
 
 ## Contributing
 
